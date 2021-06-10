@@ -13,12 +13,9 @@ if (isBrowser) {
 }
 
 function stripRedundantInfo(error) {
-  return (
-    error
-      // String the error message from the loader.
-      .replace(/Module build failed.*\nError.*\n/gm, '')
-      // Strip compilation progress-bar.
-      .replace(/\[[=\s]{3,}\]\s-\s\d+\s\/\s\d+[\r\n\s]+/gm, '')
+  return error.replace(
+    /Module build failed: Error: Compiler process exited with error Compilation failed/g,
+    ''
   );
 }
 
@@ -34,9 +31,7 @@ module.exports = function formatElmCompilerErrors(messages) {
               .replace(/(\n\s*)(\^+)/g, '$1' + error('$2'))
               .replace(/(\d+)(\|>)/g, '$1' + error('$2'))
           )
-          .map(stripRedundantInfo)
-          // drop errors that only contain whitespace
-          .filter(err => err.trim()),
+          .map(stripRedundantInfo),
         warnings: warnings
       }
     : messages;

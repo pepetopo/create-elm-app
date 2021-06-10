@@ -4,34 +4,30 @@ const fs = require('fs');
 const copySync = require('fs-extra').copySync;
 const path = require('path');
 const chalk = require('chalk');
-const spawn = require('cross-spawn');
+const spawnSync = require('child_process').spawnSync;
 const argv = require('minimist')(process.argv.slice(2));
 const commands = argv._;
-
-const isWindows = process.platform === 'win32';
+const executablePaths = require('elm/platform').executablePaths;
 
 if (commands.length === 0 || commands[0] === '') {
-  console.log();
-  console.error('Usage: elm-app create <project-directory>');
+  console.error('\nUsage: elm-app create <project-directory>');
   process.exit(1);
 }
 
 createElmApp(commands[0]);
 
 function createElmApp(name) {
-  console.log();
-  console.log('Creating ' + name + ' project...');
-  console.log();
+  console.log('\nCreating ' + name + ' project...\n');
 
-  const appRoot = path.resolve(name.toString());
+  const root = path.resolve(name);
   const template = path.join(__dirname, '../template');
 
   if (!fs.existsSync(name)) {
     try {
-      copySync(template, appRoot);
+      copySync(template, root);
       fs.renameSync(
-        path.resolve(appRoot, 'gitignore'),
-        path.resolve(appRoot, '.gitignore')
+        path.resolve(root, 'gitignore'),
+        path.resolve(root, '.gitignore')
       );
     } catch (err) {
       console.log(err);
@@ -42,33 +38,27 @@ function createElmApp(name) {
     process.exit(1);
   }
 
-  // Run initial `elm make`
-  const spawnElmPkgResult = spawn.sync(
-    path.resolve(__dirname, '../node_modules/.bin/elm'),
-    // Run elm-make to install the dependencies.
-    ['make', 'src/Main.elm', '--output=/dev/null'],
-    { stdio: 'inherit', cwd: appRoot }
+  process.chdir(root);
+
+  // Run initial `elm-package install -y`
+  const spawnElmPkgResult = spawnSync(
+    executablePaths['elm-package'],
+    ['install', '-y'],
+    { stdio: 'inherit' }
   );
 
   if (spawnElmPkgResult.status !== 0) {
-    console.log();
-    console.log(chalk.red('Failed to install elm packages'));
-    console.log();
-    console.log('Please, make sure you have internet connection!');
-    if (!isWindows) {
-      console.log();
-      console.log(
-        'In case if you are running Unix OS, you might look in to this issue:'
-      );
-      console.log();
-      console.log('    https://github.com/halfzebra/create-elm-app/issues/10');
-    }
+    console.log(chalk.red('\nFailed to install elm packages'));
+    console.log('\nPlease, make sure you have internet connection!');
+    console.log(
+      '\nIn case if you are running Unix OS, you might look in to this issue:'
+    );
+    console.log('\n    https://github.com/halfzebra/create-elm-app/issues/10');
     process.exit(1);
   }
 
-  console.log();
   console.log(
-    chalk.green('Project is successfully created in `' + appRoot + '`.')
+    chalk.green('\nProject is successfully created in `' + root + '`.')
   );
   console.log();
   console.log('Inside that directory, you can run several commands:');

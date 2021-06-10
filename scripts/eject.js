@@ -82,14 +82,12 @@ function performEject(pkg) {
   // Update or create new package.json
   fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
 
-  console.log();
-  console.log('Please wait for npm to install all required dependencies...');
+  console.log('\nPlease wait for npm to install all required dependencies...');
 
   // Install npm packages
   spawn.sync('npm', ['install'], { stdio: 'inherit' });
 
-  console.log();
-  console.log(chalk.green('Ejected successfully!'));
+  console.log(chalk.green('\nEjected successfully!'));
 }
 
 // The following dependencies will be removed:
@@ -101,13 +99,14 @@ const devDependencies = extendOmittingProps(
 const scripts = {
   build: 'node scripts/build.js',
   start: 'node scripts/start.js',
-  make: 'elm make',
-  repl: 'elm repl',
-  reactor: 'elm reactor',
+  package: 'elm-package',
+  make: 'elm-make',
+  repl: 'elm-repl',
+  reactor: 'elm-reactor',
   test: 'elm-test'
 };
 
-if (fs.existsSync('elm.json') === false) {
+if (fs.existsSync('elm-package.json') === false) {
   console.log('Please, run the eject script from project root directory');
   process.exit(1);
 }
@@ -125,7 +124,7 @@ if (fs.existsSync('./package.json') === true) {
         if (diff.length !== 0) {
           console.log(diff.toString());
           console.log(
-            'Ejecting will overwrite your "devDependencies" in package.json\n'
+            'Ejecting wil overwrite your "devDependencies" in package.json\n'
           );
           return promptYesOrNo();
         }

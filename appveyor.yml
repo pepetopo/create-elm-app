@@ -3,16 +3,6 @@ image: Visual Studio 2017
 platform:
   - x64
 
-# Test against these versions of Node.js.
-environment:
-  matrix:
-  # node.js
-    - nodejs_version: "12"
-    - nodejs_version: "14"
-
-matrix:
-  fast_finish: true
-
 install:
   - ps: Install-Product node $env:nodejs_version $env:platform
 

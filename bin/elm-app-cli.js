@@ -5,22 +5,11 @@
 const path = require('path');
 const spawn = require('cross-spawn');
 const argv = require('minimist')(process.argv.slice(2));
-const elmExecutable = require.resolve('elm/bin/elm');
+const executablePaths = require('elm/platform').executablePaths;
 const version = require('../package.json').version;
-const elmVersion = require('elm/package.json').version;
+const elmPlatformVersion = require('elm/package.json').version;
 
 const commands = argv._;
-
-const elmCommands = [
-  'repl',
-  'init',
-  'reactor',
-  'make',
-  'install',
-  'bump',
-  'diff',
-  'publish'
-];
 
 if (commands.length === 0) {
   help(version);
@@ -28,34 +17,14 @@ if (commands.length === 0) {
 }
 
 const script = commands[0];
+const scriptArgs = commands.splice(1);
 
 switch (script) {
+  case 'create':
   case 'build':
   case 'eject':
   case 'start':
-    if (argv['help']) {
-      help(version, 'start');
-      break;
-    }
-
-    let args = [];
-    const env = {};
-    Object.keys(argv || {}).forEach(key => {
-      if (key === 'browser') {
-        // `--no-browser` turns into `--browser false`
-        // See https://github.com/substack/minimist/issues/123
-        args = args.concat([argv[key] ? '--browser' : '--no-browser']);
-      }
-      if (key === 'debug' && argv[key] === false) {
-        env.ELM_DEBUGGER = 'false';
-      }
-    });
-
-    spawnSyncNode(path.resolve(__dirname, '../scripts', script), args, env);
-    break;
-
-  case 'create':
-    spawnSyncNode(path.resolve(__dirname, '../scripts/create'), commands[1]);
+    spawnSyncNode(path.resolve(__dirname, '../scripts', script), scriptArgs);
     break;
 
   case 'test': {
@@ -66,7 +35,11 @@ switch (script) {
       }
     });
 
-    args = args.concat(['--compiler', require.resolve('elm/bin/elm')]);
+    args = args.concat([
+      '--compiler',
+      path.normalize(executablePaths['elm-make'])
+    ]);
+
     const cp = spawn.sync(require.resolve('elm-test/bin/elm-test'), args, {
       stdio: 'inherit'
     });
@@ -77,10 +50,19 @@ switch (script) {
 
     break;
   }
+  case 'install': {
+    const executable = executablePaths['elm-package'];
+    spawn.sync(path.normalize(executable), process.argv.slice(2), {
+      stdio: 'inherit'
+    });
+    break;
+  }
   default:
     // Proxy elm-platform cli commands.
-    if (elmCommands.indexOf(script) !== -1) {
-      spawn.sync(elmExecutable, process.argv.slice(2), {
+    if (['package', 'reactor', 'make', 'repl'].indexOf(script) !== -1) {
+      const executable = executablePaths['elm-' + script];
+
+      spawn.sync(path.normalize(executable), process.argv.slice(3), {
         stdio: 'inherit'
       });
       break;
@@ -93,36 +75,16 @@ switch (script) {
 /**
  *Prints help message
  *
- * @param  {string} version Package version
- * @param  {string} command Name of command for which to print help message
+ * @param  {string} version [description]
  * @return {undefined}
  */
-function help(version, command = '') {
-  switch (command) {
-    case 'start':
-      console.log();
-      console.log('Usage: elm-app start [options...]');
-      console.log();
-      console.log('where [options...] is any number of:');
-      console.log('--no-browser\tDo not open the browser automatically');
-      console.log('--no-debug\tDisable the elm time travel debugger');
-      console.log();
-      break;
-    case 'test':
-      // NOTE: Current implementation calls through to `elm-test` for help message
-      break;
-    default:
-      console.log();
-      console.log('Usage: elm-app <command>');
-      console.log();
-      console.log('where <command> is one of:');
-      console.log('    build, start, test, eject, ' + elmCommands.join(', '));
-      console.log();
-      console.log();
-      console.log('Elm ' + elmVersion);
-      console.log();
-  }
-
+function help(version) {
+  console.log('\nUsage: elm-app <command>\n');
+  console.log('where <command> is one of:');
+  console.log(
+    '    create, build, start, install, test, eject, package, reactor, make, repl\n'
+  );
+  console.log('\nElm ' + elmPlatformVersion + '\n');
   console.log(
     'create-elm-app@' + version + ' ' + path.resolve(__dirname, '..')
   );
@@ -132,14 +94,12 @@ function help(version, command = '') {
  * Spawn separate node process with specified script
  *
  * @param  {string} script Path to script
- * @param  {Array} args   Script arguments
- * @param {Object} env Overwrite process.env properties
+ * @param  {Arrays} args   Script arguments
  * @return {undefined}
  */
-function spawnSyncNode(script, args, env) {
+function spawnSyncNode(script, args) {
   const cp = spawn.sync('node', [script].concat(args || []), {
-    stdio: 'inherit',
-    env: Object.assign({}, process.env, env)
+    stdio: 'inherit'
   });
 
   if (cp.status !== 0) {

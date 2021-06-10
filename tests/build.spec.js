@@ -1,3 +1,6 @@
+/* eslint-disable */
+/* eslint-env mocha */
+const fs = require('fs');
 const path = require('path');
 const spawn = require('cross-spawn');
 const rimraf = require('rimraf');
@@ -10,36 +13,28 @@ const testAppDir = path.join(rootDir, testAppName);
 const createElmAppCmd = path.join(rootDir, 'bin/create-elm-app-cli.js');
 const elmAppCmd = path.join(rootDir, 'bin/elm-app-cli.js');
 
-describe.skip('Creating and making a build of Elm application', function() {
-  this.timeout(1000 * 60 * 5); // 5 minutes.
+describe('Creating and making a build of Elm application', function() {
+  this.timeout(30000);
 
-  before(function(done) {
-    this.enableTimeouts(false);
+  before(done => {
     process.env.PUBLIC_URL = './';
-    const { status: createStatus } = spawn.sync(
-      'node',
-      [createElmAppCmd, testAppName],
-      { cwd: rootDir }
-    );
-
-    if (createStatus !== 0) {
-      return done(false);
-    }
-
-    const { status: buildStatus } = spawn.sync('node', [elmAppCmd, 'build'], {
-      cwd: testAppDir
+    spawn('node', [createElmAppCmd, testAppName]).on('close', status => {
+      if (status === 0) {
+        spawn('node', [elmAppCmd, 'build'], {
+          cwd: testAppDir
+        }).on('close', status => {
+          if (status === 0) {
+            done();
+          }
+        });
+      } else {
+        done(false);
+      }
     });
-
-    if (buildStatus !== 0) {
-      return done(false);
-    }
-
-    return done();
   });
 
   after(() => {
     rimraf.sync(testAppDir);
-    this.enableTimeouts(true);
   });
 
   it('compiled correctly and renders "Your Elm App is working!" text', done => {
